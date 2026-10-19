@@ -14,7 +14,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 CACHE_DIR = pathlib.Path.home() / ".cache" / "yt-tui" / "thumbnails"
-WIDTH_DEF = 38
+WIDTH_DEF = 62
 CHAFA_TIMEOUT = 8.0
 _HASH_LEN = 16
 
@@ -54,6 +54,8 @@ async def _fetch(url: str) -> bytes | None:
 
 def _clean_ansi(text: str) -> str:
     """Strip ANSI escape sequences that break Textual/Rich rendering."""
+    if not text:
+        return ""
     # cursor hide/show, save/restore, mode sequences
     text = text.replace("\x1b[?25l", "").replace("\x1b[?25h", "")
     text = re.sub(r"\x1b7|\x1b8", "", text)
@@ -67,16 +69,43 @@ def _clean_ansi(text: str) -> str:
 
 def _run_chafa_sync(img: pathlib.Path, width: int, height: int) -> str:
     size = f"{max(1, min(width, 180))}x{height}"
+    # High-density symbols (vhalf+quad+sextant) + perceptually accurate color space
     cargs = [
-        "chafa", "-f", "symbols", "-c", "full",
+        "chafa",
+        "-f", "symbols",
+        "--symbols", "vhalf+quad+sextant",
+        "-c", "full",
+        "--color-space", "din99d",
+        "--work", "9",
         "--margin-bottom", "0",
         "-s", size,
         str(img),
     ]
     try:
         cp = subprocess.run(
-            cargs, capture_output=True, text=True, timeout=CHAFA_TIMEOUT,
+            cargs,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=CHAFA_TIMEOUT,
         )
+        if cp.returncode != 0:
+            # Fallback to basic symbols if advanced classes are unsupported
+            cargs_fallback = [
+                "chafa", "-f", "symbols", "-c", "full",
+                "--margin-bottom", "0",
+                "-s", size,
+                str(img),
+            ]
+            cp = subprocess.run(
+                cargs_fallback,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=CHAFA_TIMEOUT,
+            )
     except subprocess.TimeoutExpired:
         logger.warning("chafa timed-out")
         return ""
@@ -88,10 +117,10 @@ def _run_chafa_sync(img: pathlib.Path, width: int, height: int) -> str:
         return ""
 
     if cp.returncode != 0:
-        logger.debug("chafa RC=%s: %s", cp.returncode, cp.stderr.strip())
+        logger.debug("chafa RC=%s: %s", cp.returncode, cp.stderr.strip() if cp.stderr else "")
         return ""
 
-    return _clean_ansi(cp.stdout)
+    return _clean_ansi(cp.stdout or "")
 
 
 async def render(url: str, width: int = WIDTH_DEF) -> str:

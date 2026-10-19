@@ -43,6 +43,7 @@ ENV/
 # Project-specific
 data/
 scratch/
+player_bin/
 debug.txt
 *.jpg
 *.tmp

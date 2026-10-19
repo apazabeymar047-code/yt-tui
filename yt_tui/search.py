@@ -21,10 +21,9 @@ def search_youtube(query: str, max_results: int = 15) -> tuple[list[dict], bool]
     source = query if query.startswith(("http://", "https://")) else f"ytsearch{max_results}:{query}"
     
     with yt_dlp.YoutubeDL(opts) as ydl:
-        try:
-            info = ydl.extract_info(source, download=False)
-        except Exception:
-            return [], False
+        # Si yt-dlp falla, dejamos que la excepción suba para que la UI
+        # pueda mostrar un mensaje de error comprensible.
+        info = ydl.extract_info(source, download=False)
 
         if not info:
             return [], False
@@ -41,7 +40,7 @@ def search_youtube(query: str, max_results: int = 15) -> tuple[list[dict], bool]
         if not e:
             continue
         # For flat extraction, id might be in 'id' or 'url'
-        vid_id = e.get("id") or e.get("url", "").split("v=")[-1].split("&")[0] or "Unknown"
+        vid_id = e.get("id") or e.get("url", "").split("v=")[-1].split("&")[0] or "Desconocido"
 
         # yt-dlp returns thumbnails as a list; use highest resolution
         thumb = e.get("thumbnail")
@@ -52,8 +51,8 @@ def search_youtube(query: str, max_results: int = 15) -> tuple[list[dict], bool]
         results.append(
             {
                 "id": vid_id,
-                "title": e.get("title") or "Unknown",
-                "channel": e.get("uploader") or e.get("channel") or "Unknown",
+                "title": e.get("title") or "Desconocido",
+                "channel": e.get("uploader") or e.get("channel") or "Desconocido",
                 "duration": e.get("duration"),
                 "views": e.get("view_count"),
                 "url": f"https://www.youtube.com/watch?v={vid_id}",

@@ -72,3 +72,113 @@ def test_history_manager(tmp_path, monkeypatch):
     watch_history = HistoryManager.get_watch_history()
     assert len(watch_history) == 1
     assert watch_history[0]["id"] == "123"
+
+
+def test_history_remove_and_clear(tmp_path, monkeypatch):
+    from yt_tui.utils import HistoryManager
+    monkeypatch.setattr("yt_tui.utils.DATA_DIR", tmp_path)
+
+    HistoryManager.add_search("uno")
+    HistoryManager.add_search("dos")
+    HistoryManager.remove_search("uno")
+    assert [h["query"] for h in HistoryManager.get_search_history()] == ["dos"]
+
+    HistoryManager.add_watch({"id": "1", "title": "A"})
+    HistoryManager.add_watch({"id": "2", "title": "B"})
+    HistoryManager.remove_watch("1")
+    assert [h["id"] for h in HistoryManager.get_watch_history()] == ["2"]
+
+    HistoryManager.clear_search()
+    HistoryManager.clear_watch()
+    assert HistoryManager.get_search_history() == []
+    assert HistoryManager.get_watch_history() == []
+
+
+def test_library_toggle(tmp_path, monkeypatch):
+    from yt_tui.utils import Library
+    monkeypatch.setattr("yt_tui.utils.DATA_DIR", tmp_path)
+
+    video = {"id": "abc", "title": "Ejemplo", "channel": "Canal"}
+
+    assert Library.get("favorites") == []
+    assert Library.toggle("favorites", video) is True
+    assert Library.contains("favorites", "abc")
+    assert [v["id"] for v in Library.get("favorites")] == ["abc"]
+
+    # Segundo toggle lo quita
+    assert Library.toggle("favorites", video) is False
+    assert not Library.contains("favorites", "abc")
+
+    # Las listas son independientes
+    Library.toggle("later", video)
+    assert Library.contains("later", "abc")
+    assert not Library.contains("favorites", "abc")
+
+    # Los vídeos sin id se ignoran
+    assert Library.toggle("later", {"title": "sin id"}) is False
+
+
+def test_queue_store(tmp_path, monkeypatch):
+    from yt_tui.utils import QueueStore
+    monkeypatch.setattr("yt_tui.utils.DATA_DIR", tmp_path)
+
+    assert QueueStore.get() == []
+    assert QueueStore.add({"id": "a", "title": "A"}) is True
+    # No se repite el mismo id
+    assert QueueStore.add({"id": "a", "title": "A"}) is False
+    QueueStore.add({"id": "b", "title": "B"})
+    assert [v["id"] for v in QueueStore.get()] == ["a", "b"]
+
+    QueueStore.remove_at(0)
+    assert [v["id"] for v in QueueStore.get()] == ["b"]
+
+    QueueStore.clear()
+    assert QueueStore.get() == []
+
+    # Sin id no se añade
+    assert QueueStore.add({"title": "sin id"}) is False
+
+
+def test_queue_store_remove_id_y_contains(tmp_path, monkeypatch):
+    from yt_tui.utils import QueueStore
+    monkeypatch.setattr("yt_tui.utils.DATA_DIR", tmp_path)
+
+    QueueStore.add({"id": "a", "title": "A"})
+    assert QueueStore.contains("a") is True
+    assert QueueStore.contains("b") is False
+
+    assert QueueStore.remove_id("a") is True
+    assert QueueStore.contains("a") is False
+    # Quitar algo que no está no rompe nada
+    assert QueueStore.remove_id("a") is False
+
+
+def test_copy_to_clipboard_windows(monkeypatch):
+    from yt_tui import utils
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return None
+
+    monkeypatch.setattr(utils.subprocess, "run", fake_run)
+    monkeypatch.setattr(utils.sys, "platform", "win32")
+
+    assert utils.copy_to_clipboard("https://youtu.be/abc") is True
+    assert calls and calls[0] == ["clip"]
+
+    # Texto vacío no intenta copiar
+    assert utils.copy_to_clipboard("") is False
+
+
+def test_copy_to_clipboard_no_disponible(monkeypatch):
+    from yt_tui import utils
+
+    def boom(*args, **kwargs):
+        raise OSError("sin portapapeles")
+
+    monkeypatch.setattr(utils.subprocess, "run", boom)
+    monkeypatch.setattr(utils.sys, "platform", "linux")
+
+    assert utils.copy_to_clipboard("hola") is False
