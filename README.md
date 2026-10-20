@@ -225,4 +225,4 @@ python -m pytest tests/ -q
 
 ## 📄 Licencia
 
-MIT, según el proyecto original.
+MIT — consulta el archivo [LICENSE](LICENSE).

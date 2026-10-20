@@ -59,3 +59,6 @@ main1/
 # Settings (may contain credentials)
 settings/config.ini
 *.lock
+
+# Notas personales (solo locales)
+REGISTRO_CAMBIOS_Y_NOTAS.txt
