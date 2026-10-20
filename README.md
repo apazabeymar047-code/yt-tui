@@ -23,6 +23,26 @@
 
 ---
 
+## 📸 Capturas
+
+<p align="center">
+  <img src="docs/captura-busqueda.png" alt="Búsqueda con miniatura, canal, duración y visitas" width="860" />
+  <br/>
+  <sub>Búsqueda con miniatura y datos del vídeo.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/captura-favoritos.png" alt="Favoritos y aviso de reproducción con la posición en la cola" width="860" />
+  <br/>
+  <sub>Favoritos y aviso de reproducción con la posición <code>[i/n]</code>.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/captura-preferencias.png" alt="Preferencias: calidad, volumen, velocidad e idiomas" width="420" />
+  <br/>
+  <sub>Preferencias de reproducción.</sub>
+</p>
+
 ## ✨ Características
 
 - 🔎 **Búsqueda universal** — por palabras clave o pegando una URL de vídeo o de lista de reproducción.
